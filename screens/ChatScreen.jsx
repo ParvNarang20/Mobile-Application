@@ -1,114 +1,84 @@
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, Image, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import * as ImagePicker from 'expo-image-picker';
+import {
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
+} from 'react-native';
 
 const API = 'http://10.7.1.89:3000';
-const COLORS = { background: '#F5F7FA', ink: '#17212B', muted: '#74808C', accent: '#315EFB', white: '#FFFFFF', border: '#E7EBF0' };
 
 const ChatScreen = ({ route }) => {
-    const [messages, setMessages] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState('');
-    const [currentMessage, setCurrentMessage] = useState('');
-    const [participantsName, setParticipantsName] = useState([]);
-    const [sending, setSending] = useState(false);
     const conversation = route.params.data;
+    const [messages, setMessages] = useState([]);
+    const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         fetch(`${API}/message?conversation_id=${conversation.conversationId}`, {
             headers: { authorization: 'Basic first:second' },
         })
             .then(response => response.json())
-            .then(data => setMessages(Array.isArray(data) ? data : data.data || []))
-            .catch(() => setError('Couldn’t load messages. Please try again.'))
+            .then(data => setMessages(data.data || data))
+            .catch(() => Alert.alert('Error', 'Could not load messages.'))
             .finally(() => setLoading(false));
-
-        Promise.all((conversation.participants || []).map(id =>
-            fetch(`${API}/user/profile?user_id=${id}`, { headers: { Authorization: 'Basic first:second' } })
-                .then(response => response.json())
-                .then(profile => profile.name)
-                .catch(() => null)
-        )).then(names => setParticipantsName(names.filter(Boolean)));
     }, [conversation.conversationId]);
 
-    const sendMessage = async () => {
-        const content = currentMessage.trim();
-        if (!content || sending) return;
-        setSending(true);
-        try {
-            const response = await fetch(`${API}/message`, {
-                method: 'POST',
-                headers: { Authorization: 'Basic first:second', 'Content-Type': 'application/json' },
-                body: JSON.stringify({ conversation_id: conversation.conversationId, content }),
-            });
-            if (!response.ok) throw new Error('Message could not be sent.');
-            setMessages(previous => [...previous, { content }]);
-            setCurrentMessage('');
-        } catch {
-            Alert.alert('Message not sent', 'Please check your connection and try again.');
-        } finally {
-            setSending(false);
-        }
-    };
+    const sendMessage = () => {
+        const text = message.trim();
+        if (!text) return;
 
-    const pickImage = async () => {
-        const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-        if (!permission.granted) {
-            Alert.alert('Permission needed', 'Allow photo access to choose an image.');
-            return;
-        }
-        const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.8, base64: true });
-        if (result.canceled || !result.assets?.[0]) return;
-        const asset = result.assets[0];
-        setMessages(previous => [...previous, { imageInfo: asset.uri }]);
         fetch(`${API}/message`, {
             method: 'POST',
-            headers: { Authorization: 'Basic first:second', 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversation_id: conversation.conversationId, imageInfo: asset.base64 }),
-        }).catch(() => Alert.alert('Image not sent', 'Please check your connection and try again.'));
+            headers: {
+                Authorization: 'Basic first:second',
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                conversation_id: conversation.conversationId,
+                content: text,
+            }),
+        })
+            .then(response => {
+                if (!response.ok) throw new Error('Could not send message');
+                setMessages(oldMessages => [...oldMessages, { content: text }]);
+                setMessage('');
+            })
+            .catch(() => Alert.alert('Error', 'Message was not sent.'));
     };
 
     return (
-        <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined} keyboardVerticalOffset={90}>
-            <View style={styles.chatHeading}>
-                <Text style={styles.groupName}>{conversation.name || 'Conversation'}</Text>
-                <Text style={styles.memberNames}>{participantsName.length ? participantsName.join(' · ') : 'Your conversation'}</Text>
-            </View>
-            {loading ? (
-                <View style={styles.centerState}><ActivityIndicator color={COLORS.accent} /><Text style={styles.helperText}>Loading messages…</Text></View>
-            ) : error ? (
-                <View style={styles.centerState}><Text style={styles.helperText}>{error}</Text></View>
-            ) : (
-                <ScrollView style={styles.messageArea} contentContainerStyle={styles.messageContent}>
-                    {messages.length === 0 ? (
-                        <View style={styles.emptyState}><Text style={styles.emptyTitle}>Say hello 👋</Text><Text style={styles.helperText}>Your messages will show up here.</Text></View>
-                    ) : messages.map((message, index) => (
-                        <View key={message.id ?? index} style={styles.messageRow}>
-                            <View style={styles.bubble}>
-                                {message.content ? <Text style={styles.messageText}>{message.content}</Text> : null}
-                                {message.imageInfo ? <Image source={{ uri: message.imageInfo.startsWith('data:') || message.imageInfo.startsWith('http') || message.imageInfo.startsWith('file:') ? message.imageInfo : `data:image/jpeg;base64,${message.imageInfo}` }} style={styles.messageImage} /> : null}
-                            </View>
-                        </View>
-                    ))}
-                </ScrollView>
-            )}
+        <KeyboardAvoidingView
+            style={styles.screen}
+            behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
+            <Text style={styles.title}>{conversation.name || 'Conversation'}</Text>
+
+            <ScrollView style={styles.messages} contentContainerStyle={styles.messageList}>
+                {loading ? <Text style={styles.hint}>Loading messages…</Text> : null}
+                {!loading && messages.length === 0 ? <Text style={styles.hint}>Say hello to start chatting.</Text> : null}
+
+                {messages.map((item, index) => (
+                    <View key={item.id || index} style={styles.bubble}>
+                        {item.content ? <Text style={styles.messageText}>{item.content}</Text> : null}
+                    </View>
+                ))}
+            </ScrollView>
+
             <View style={styles.composer}>
-                <TouchableOpacity onPress={pickImage} style={styles.imageButton} accessibilityLabel="Choose an image">
-                    <Text style={styles.imageButtonText}>＋</Text>
-                </TouchableOpacity>
                 <TextInput
-                    placeholder="Write a message…"
-                    placeholderTextColor="#9AA4AF"
                     style={styles.input}
-                    value={currentMessage}
-                    onChangeText={setCurrentMessage}
-                    multiline
-                    maxLength={500}
-                    returnKeyType="send"
-                    onSubmitEditing={sendMessage}
+                    placeholder="Write a message…"
+                    value={message}
+                    onChangeText={setMessage}
                 />
-                <TouchableOpacity onPress={sendMessage} disabled={!currentMessage.trim() || sending} style={[styles.sendButton, (!currentMessage.trim() || sending) && styles.sendButtonDisabled]}>
-                    <Text style={styles.sendText}>{sending ? '…' : 'Send'}</Text>
+                <TouchableOpacity style={styles.sendButton} onPress={sendMessage}>
+                    <Text style={styles.sendText}>Send</Text>
                 </TouchableOpacity>
             </View>
         </KeyboardAvoidingView>
@@ -116,27 +86,17 @@ const ChatScreen = ({ route }) => {
 };
 
 const styles = StyleSheet.create({
-    screen: { flex: 1, backgroundColor: COLORS.background },
-    chatHeading: { paddingHorizontal: 18, paddingVertical: 14, backgroundColor: COLORS.white, borderBottomColor: COLORS.border, borderBottomWidth: 1 },
-    groupName: { color: COLORS.ink, fontWeight: '700', fontSize: 16 },
-    memberNames: { color: COLORS.muted, fontSize: 12, marginTop: 4 },
-    messageArea: { flex: 1 },
-    messageContent: { padding: 16, flexGrow: 1, justifyContent: 'flex-end' },
-    messageRow: { alignItems: 'flex-start', marginVertical: 5 },
-    bubble: { maxWidth: '85%', backgroundColor: COLORS.white, borderColor: COLORS.border, borderWidth: 1, borderRadius: 16, borderBottomLeftRadius: 5, paddingHorizontal: 14, paddingVertical: 10 },
-    messageText: { color: COLORS.ink, fontSize: 15, lineHeight: 21 },
-    messageImage: { width: 190, height: 190, borderRadius: 10, marginTop: 4 },
-    centerState: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: 10 },
-    emptyState: { alignItems: 'center', marginBottom: 24, gap: 7 },
-    emptyTitle: { color: COLORS.ink, fontSize: 18, fontWeight: '600' },
-    helperText: { color: COLORS.muted, fontSize: 14 },
-    composer: { flexDirection: 'row', alignItems: 'flex-end', paddingHorizontal: 12, paddingVertical: 10, backgroundColor: COLORS.white, borderTopWidth: 1, borderTopColor: COLORS.border, gap: 8 },
-    imageButton: { width: 42, height: 42, borderRadius: 14, backgroundColor: '#EEF1F6', alignItems: 'center', justifyContent: 'center' },
-    imageButtonText: { color: COLORS.accent, fontSize: 25, lineHeight: 28, fontWeight: '400' },
-    input: { flex: 1, minHeight: 42, maxHeight: 110, backgroundColor: '#F4F6F8', borderRadius: 14, paddingHorizontal: 14, paddingVertical: 10, color: COLORS.ink, fontSize: 15 },
-    sendButton: { height: 42, paddingHorizontal: 15, borderRadius: 14, backgroundColor: COLORS.accent, alignItems: 'center', justifyContent: 'center' },
-    sendButtonDisabled: { backgroundColor: '#AEBBF7' },
-    sendText: { color: COLORS.white, fontSize: 14, fontWeight: '600' },
+    screen: { flex: 1, backgroundColor: '#F5F7FA' },
+    title: { padding: 16, color: '#17212B', fontSize: 17, fontWeight: 'bold', backgroundColor: 'white' },
+    messages: { flex: 1 },
+    messageList: { padding: 16, flexGrow: 1, justifyContent: 'flex-end' },
+    hint: { color: '#74808C', textAlign: 'center', marginVertical: 12 },
+    bubble: { alignSelf: 'flex-start', maxWidth: '85%', backgroundColor: 'white', borderRadius: 14, padding: 12, marginBottom: 8 },
+    messageText: { color: '#17212B', fontSize: 15 },
+    composer: { flexDirection: 'row', alignItems: 'center', padding: 10, backgroundColor: 'white' },
+    input: { flex: 1, backgroundColor: '#F5F7FA', borderRadius: 12, paddingHorizontal: 12, marginHorizontal: 8 },
+    sendButton: { backgroundColor: '#315EFB', borderRadius: 12, padding: 12 },
+    sendText: { color: 'white', fontWeight: 'bold' },
 });
 
 export default ChatScreen;
