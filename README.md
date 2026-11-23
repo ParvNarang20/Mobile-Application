@@ -1,4 +1,4 @@
-# DesktopApplication
+# Mobile Application
 
 A simple class project chat app built with Expo and React Native.
 
