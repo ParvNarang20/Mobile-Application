@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "chat_app",
-    "slug": "chat_app",
+    "name": "Mobile Application",
+    "slug": "mobile-application",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,6 +11,7 @@
       "bundleIdentifier": "com.anonymous.chat-app"
     },
     "android": {
+      "package": "com.parv.mobileapplication",
       "adaptiveIcon": {
         "backgroundColor": "#E6F4FE",
         "foregroundImage": "./assets/android-icon-foreground.png",
@@ -39,6 +40,12 @@
           }
         }
       ]
-    ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "b50a51a9-7864-42dd-9c6e-386042726286"
+      }
+    },
+    "owner": "parvnarang20"
   }
 }
