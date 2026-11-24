@@ -1,47 +1,51 @@
 import { useEffect, useState } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { API_URL } from '../api';
 
-const ConversationScreen = ({ navigation }) => {
+export default function ConversationScreen({ navigation }) {
     const [conversations, setConversations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
 
-    useEffect(() => {
-        fetch('http://10.7.1.89:3000/conversation', {
-            headers: { authorization: 'Basic first:second' },
-        })
-            .then(response => response.json())
-            .then(data => setConversations(data))
+    const loadConversations = () => {
+        setLoading(true);
+        setError(false);
+        fetch(`${API_URL}/conversation`)
+            .then(response => {
+                if (!response.ok) throw new Error('Could not load chats');
+                return response.json();
+            })
+            .then(data => setConversations(Array.isArray(data) ? data : []))
             .catch(() => setError(true))
             .finally(() => setLoading(false));
-    }, []);
+    };
+
+    useEffect(() => {
+        loadConversations();
+        const unsubscribe = navigation.addListener('focus', loadConversations);
+        return unsubscribe;
+    }, [navigation]);
 
     return (
         <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-            <Text style={styles.title}>Messages</Text>
+            <Text style={styles.title}>Chats</Text>
             <Text style={styles.subtitle}>Your conversations</Text>
 
-            {loading ? <Text style={styles.info}>Loading…</Text> : null}
-            {error ? <Text style={styles.info}>Could not load conversations.</Text> : null}
-            {!loading && !error && conversations.length === 0 ? <Text style={styles.info}>No conversations yet.</Text> : null}
+            {loading ? <Text style={styles.info}>Loading chats…</Text> : null}
+            {error ? <Text style={styles.info}>Chat server is off. Start it with: npm run server</Text> : null}
+            {!loading && !error && conversations.length === 0 ? <Text style={styles.info}>No chats yet. Tap “New Chat” to start one.</Text> : null}
 
             {conversations.map((item, index) => (
                 <TouchableOpacity
                     key={item.id || index}
                     style={styles.card}
                     onPress={() => navigation.navigate('Chat', {
-                        data: {
-                            name: item.name,
-                            conversationId: item.id,
-                            participants: item.participants_ids,
-                        },
+                        data: { name: item.name, conversationId: item.id, participants: item.participants_ids },
                     })}
                 >
-                    <View style={styles.avatar}>
-                        <Text style={styles.avatarText}>{(item.name || 'C').charAt(0).toUpperCase()}</Text>
-                    </View>
+                    <View style={styles.avatar}><Text style={styles.avatarText}>{(item.name || 'C').charAt(0).toUpperCase()}</Text></View>
                     <View style={styles.details}>
-                        <Text style={styles.name}>{item.name || 'Untitled conversation'}</Text>
+                        <Text style={styles.name}>{item.name || 'New chat'}</Text>
                         <Text style={styles.info}>Tap to open chat</Text>
                     </View>
                     <Text style={styles.arrow}>›</Text>
@@ -49,7 +53,7 @@ const ConversationScreen = ({ navigation }) => {
             ))}
         </ScrollView>
     );
-};
+}
 
 const styles = StyleSheet.create({
     screen: { flex: 1, backgroundColor: '#F5F7FA' },
@@ -64,5 +68,3 @@ const styles = StyleSheet.create({
     info: { color: '#74808C', fontSize: 13, marginTop: 5 },
     arrow: { color: '#74808C', fontSize: 24 },
 });
-
-export default ConversationScreen;

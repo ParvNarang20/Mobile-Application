@@ -16,6 +16,14 @@ npm install
 npm start
 ```
 
-Use the Expo Go app to open the project, or run `npm run android` / `npm run ios` for a native development build.
+## Run the chat server
 
-The app currently connects to a classroom API server configured in the screen files. Update that server address to match your network before running the chat features.
+Open another terminal in this folder and run:
+
+```bash
+npm run server
+```
+
+Keep the server running while chatting. Phones and the computer running the server must be on the same Wi-Fi. If the computer's Wi-Fi address changes, update `API_URL` in `api.js` to that address.
+
+Use the Expo Go app to open the project, or run `npm run android` / `npm run ios` for a native development build.
