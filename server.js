@@ -1,5 +1,19 @@
 const http = require('http');
 const { randomUUID } = require('crypto');
+const fs = require('fs');
+const path = require('path');
+
+const dataFile = path.join(__dirname, 'chat-data.json');
+
+function loadChatData() {
+    try {
+        return JSON.parse(fs.readFileSync(dataFile, 'utf8'));
+    } catch {
+        return { conversations: [], messages: {} };
+    }
+}
+
+const chatData = loadChatData();
 
 const users = [
     { id: 'user-1', name: 'Parv', bio: 'Ready to chat' },
@@ -8,8 +22,12 @@ const users = [
     { id: 'user-4', name: 'Riya', bio: 'Classmate' },
 ];
 
-const conversations = [];
-const messages = {};
+const conversations = chatData.conversations;
+const messages = chatData.messages;
+
+function saveChatData() {
+    fs.writeFileSync(dataFile, JSON.stringify({ conversations, messages }, null, 2));
+}
 
 function sendJson(response, status, data) {
     response.writeHead(status, {
@@ -68,6 +86,7 @@ const server = http.createServer(async (request, response) => {
             };
             conversations.unshift(conversation);
             messages[conversation.id] = [];
+            saveChatData();
             return sendJson(response, 201, conversation);
         } catch {
             return sendJson(response, 400, { error: 'Invalid conversation details.' });
@@ -96,6 +115,7 @@ const server = http.createServer(async (request, response) => {
                 createdAt: new Date().toISOString(),
             };
             messages[body.conversation_id].push(message);
+            saveChatData();
             return sendJson(response, 201, message);
         } catch {
             return sendJson(response, 400, { error: 'Invalid message.' });

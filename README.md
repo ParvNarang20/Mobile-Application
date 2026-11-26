@@ -24,6 +24,6 @@ Open another terminal in this folder and run:
 npm run server
 ```
 
-Keep the server running while chatting. Phones and the computer running the server must be on the same Wi-Fi. If the computer's Wi-Fi address changes, update `API_URL` in `api.js` to that address.
+Keep the server running while chatting. Phones and the computer running the server must be on the same Wi-Fi. Chats are saved in `chat-data.json`. If the computer's Wi-Fi address changes, update `API_URL` in `api.js` to that address.
 
 Use the Expo Go app to open the project, or run `npm run android` / `npm run ios` for a native development build.
