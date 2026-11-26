@@ -29,10 +29,7 @@ const ImagePickerScreen = () => {
 
         console.log(result);
 
-        if (!result.canceled) {
-            setImage(result.assets[0].uri);
-        }
-
+        if (result.canceled || !result.assets?.[0]) return;
         setImage(result.assets[0].uri);
     };
     return (

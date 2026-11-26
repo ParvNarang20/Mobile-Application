@@ -40,6 +40,14 @@
           }
         }
       ],
+    [
+      "expo-camera",
+      {
+        "cameraPermission": "Allow Mobile Application to take photos.",
+        "microphonePermission": "Allow Mobile Application to record audio.",
+        "recordAudioAndroid": false
+      }
+    ],
       [
         "expo-build-properties",
         {

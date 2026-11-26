@@ -63,6 +63,24 @@ const ChatScreen = ({ route }) => {
             .catch(() => Alert.alert('Error', 'Message was not sent.'));
     };
 
+    const sendImage = image => {
+        fetch(`${API_URL}/message`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                conversation_id: conversation.conversationId,
+                imageInfo: image.base64,
+                senderName,
+            }),
+        })
+            .then(response => response.json())
+            .then(sentMessage => {
+                if (sentMessage.error) throw new Error(sentMessage.error);
+                setMessages(oldMessages => [...oldMessages, sentMessage]);
+            })
+            .catch(() => Alert.alert('Error', 'Image was not sent.'));
+    };
+
     const chooseImage = async () => {
         const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
         if (!permission.granted) {
@@ -77,25 +95,18 @@ const ChatScreen = ({ route }) => {
         });
 
         if (result.canceled) return;
-        const image = result.assets[0];
+        sendImage(result.assets[0]);
+    };
 
-        fetch(`${API_URL}/message`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-                conversation_id: conversation.conversationId,
-                imageInfo: image.base64,
-                senderName,
-            }),
-        })
-            .then(response => response.json())
-            .then(sentMessage => {
-                if (sentMessage.error) throw new Error(sentMessage.error);
-                setMessages(oldMessages => [...oldMessages, sentMessage]);
-            })
-            .catch(() => Alert.alert('Error', 'Image was not sent.'));
+    const takePhoto = async () => {
+        const permission = await ImagePicker.requestCameraPermissionsAsync();
+        if (!permission.granted) {
+            Alert.alert('Permission needed', 'Allow camera access to take a photo.');
+            return;
+        }
+
+        const result = await ImagePicker.launchCameraAsync({ quality: 0.8, base64: true });
+        if (!result.canceled) sendImage(result.assets[0]);
     };
 
     return (
@@ -129,6 +140,9 @@ const ChatScreen = ({ route }) => {
             </ScrollView>
 
             <View style={styles.composer}>
+                <TouchableOpacity style={styles.imageButton} onPress={takePhoto}>
+                    <Text style={styles.imageButtonText}>📷</Text>
+                </TouchableOpacity>
                 <TouchableOpacity style={styles.imageButton} onPress={chooseImage}>
                     <Text style={styles.imageButtonText}>+</Text>
                 </TouchableOpacity>
